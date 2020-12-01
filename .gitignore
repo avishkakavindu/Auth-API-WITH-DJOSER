@@ -1,0 +1,8 @@
+__pycache__
+*.sqlite3
+*.swp
+.idea
+static/admin
+auth_system/myconfig.py
+/auth_system/.env
+/venv/

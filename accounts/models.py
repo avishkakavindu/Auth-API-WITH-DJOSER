@@ -36,3 +36,17 @@ class UserAccount(AbstractBaseUser, PermissionsMixin):
     
     def __str__(self):
         return self.email
+
+
+class PayhereDetails(models.Model):
+
+    merchant_id = models.CharField(max_length=20)           # PayHere Merchant ID of the merchant
+    order_id = models.CharField(max_length=20)              # Order ID sent by Merchant to Checkout page
+    payhere_amount = models.DecimalField(max_digits=10, decimal_places=2)  # Total Amount of the payment
+    card_holder_name = models.CharField(max_length=255, default="")   # Card Holder Name
+    card_no = models.CharField(max_length=19, default="")    # Card number
+    card_expiry = models.CharField(max_length=5, default="")    # Card expiry in format MMYY (Ex: 0122)
+    user = models.ForeignKey(UserAccount, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return '{} - {}'.format(self.order_id, self.user)

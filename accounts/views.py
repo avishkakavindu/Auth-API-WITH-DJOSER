@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework import status, viewsets, permissions
 from rest_framework_simplejwt.authentication import JWTTokenUserAuthentication
 from .serializers import *
+from .permissions import IsOwner
 import requests
 
 
@@ -100,7 +101,17 @@ class PasswordResetView(APIView):
 class PayhereDetailViewSet(viewsets.ModelViewSet):
 
     authentication_classes = [JWTTokenUserAuthentication]
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsOwner]
 
     queryset = PayhereDetails.objects.all()
     serializer_class = PayhereDetailsSerializer
+
+    def perform_create(self, serializer):
+        # when a product is saved, its saved how it is the owner
+        serializer.save(user_id=self.request.user.id)
+
+    def get_queryset(self):
+        # after get all products on DB it will be filtered by its owner and return the queryset
+        owner_queryset = self.queryset.filter(user_id=self.request.user.id)
+
+        return owner_queryset

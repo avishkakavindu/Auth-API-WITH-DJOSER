@@ -40,9 +40,9 @@ class UserPasswordResetConfirmView(APIView):
 
         if response.status_code == 204:
             return Response(
-                {'Detail': 'Verified Successfully! please reset your password via Smartapp'})
+                {'Detail': 'Verified Successfully! please reset your password via Smartapp'}, status=status.HTTP_204_NO_CONTENT)
         else:
-            return Response({'Error': 'Verification failed! Token may be expired!'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'Error': 'Verification failed! Token may be expired!'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class UserPasswordResetView(APIView):
@@ -108,7 +108,10 @@ class PayhereDetailViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         # when a product is saved, its saved how it is the owner
-        serializer.save(user_id=self.request.user.id)
+        if serializer.is_valid():
+            serializer.save(user_id=self.request.user.id)
+            return Response({'Detail': 'Transaction Completed'}, status = status.HTTP_201_CREATED)
+        return Response({'Error':'Transaction Failed'}, status=status.HTTP_400_BAD_REQUEST)
 
     def get_queryset(self):
         # after get all products on DB it will be filtered by its owner and return the queryset

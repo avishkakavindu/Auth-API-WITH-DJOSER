@@ -1,13 +1,12 @@
 from django.shortcuts import render
+from django.utils.encoding import smart_str
+from django.utils.http import urlsafe_base64_decode
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework import status, viewsets, permissions
+from rest_framework_simplejwt.authentication import JWTTokenUserAuthentication
 from .serializers import *
-from rest_framework.response import Response
-from rest_framework import status
 import requests
-
-from django.utils.encoding import smart_bytes, force_str, smart_str, DjangoUnicodeDecodeError
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 
 
 class UserActivationView(APIView):
@@ -96,3 +95,12 @@ class PasswordResetView(APIView):
             return Response({'Detail': 'Password Reset Successfully'}, status=status.HTTP_204_NO_CONTENT)
         else:
             return Response({'Error': 'Please verify your email'}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+class PayhereDetailViewSet(viewsets.ModelViewSet):
+
+    authentication_classes = [JWTTokenUserAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+
+    queryset = PayhereDetails.objects.all()
+    serializer_class = PayhereDetailsSerializer

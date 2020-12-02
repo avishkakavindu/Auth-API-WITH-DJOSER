@@ -43,6 +43,7 @@ class PayhereDetails(models.Model):
     merchant_id = models.CharField(max_length=20)           # PayHere Merchant ID of the merchant
     order_id = models.CharField(max_length=20)              # Order ID sent by Merchant to Checkout page
     payhere_amount = models.DecimalField(max_digits=10, decimal_places=2)  # Total Amount of the payment
+    date = models.DateTimeField(auto_now_add=True)
     card_holder_name = models.CharField(max_length=255, default="")   # Card Holder Name
     card_no = models.CharField(max_length=19, default="")    # Card number
     card_expiry = models.CharField(max_length=5, default="")    # Card expiry in format MMYY (Ex: 0122)

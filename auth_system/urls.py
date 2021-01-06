@@ -26,4 +26,5 @@ urlpatterns = [
     path('', include(router.urls)),
     path('user/rfid-detail', RFIDDetailListAPIView.as_view()),
     path('user/rfid-detail/<int:pk>', RFIDDetailAPIView.as_view()),
+    path('user/request-purchase', RequestPoolAPIView.as_view()),
 ]

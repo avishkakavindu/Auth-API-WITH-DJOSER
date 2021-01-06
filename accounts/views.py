@@ -11,6 +11,7 @@ from django.http import Http404
 from .serializers import *
 from .permissions import IsOwner
 from .util import Util
+from .tasks import update_request_status
 import requests
 from random import randint
 
@@ -40,14 +41,14 @@ class RFIDDetailListAPIView(APIView):
     authentication_classes = [JWTTokenUserAuthentication]
     permission_classes = [permissions.IsAuthenticated, IsOwner]
 
-    # get rfdi records of the use
+    # get rfdi records of the user
     def get(self, request):
         rfid_detail = RFIDDetail.objects.filter(user=self.request.user.id)
         serializer = RFIDDetailSerializer(rfid_detail, many=True)
 
         return Response(serializer.data)
 
-    # create rfdi Application
+    # create rfdi record
     def post(self, request):
         serializer = RFIDDetailSerializer(data=request.data)
 
@@ -82,25 +83,33 @@ class RFIDDetailAPIView(APIView):
 
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    # queryset = RFIDDetail.objects.all()
-    # serializer_class = RFIDDetailSerializer
-    #
-    # def perform_create(self, serializer):
-    #     # when a product is saved, its saved how it is the owner
-    #     if serializer.is_valid():
-    #         if RFIDDetail.objects.filter(vehicle_no=self.request.data['vehicle_no']).exists():
-    #             print('\nlol\n')
-    #             return Response({'Error': 'Vehicle already registered for RFID'}, status=status.HTTP_401_UNAUTHORIZED)
-    #         else:
-    #             serializer.save(user_id=self.request.user.id)
-    #             return Response({'Detail': 'RFID Application saved! Please wait for conformation email.'}, status=status.HTTP_201_CREATED)
-    #     return Response({'Error': 'Request Failed'}, status=status.HTTP_400_BAD_REQUEST)
-    #
-    # def get_queryset(self):
-    #     # after get all products on DB it will be filtered by its owner and return the queryset
-    #     owner_queryset = self.queryset.filter(user_id=self.request.user.id)
-    #
-    #     return owner_queryset
+
+class RequestPoolAPIView(generics.CreateAPIView):
+    authentication_classes = [JWTTokenUserAuthentication]
+    permission_classes = [permissions.IsAuthenticated, IsOwner]
+
+    def get_rfid(self, vehicle_no):
+        rfid = RFIDDetail.objects.get(vehicle_no=vehicle_no)
+
+        return rfid
+
+    def post(self, request):
+        serializer = RequestPoolSerializer(data=request.data)
+
+        if serializer.is_valid():
+            rfid = RFIDDetail.objects.get(vehicle_no=request.data['vehicle_no']).rf_id
+
+            rec = serializer.save(rfid=rfid)
+            # shedule bakgroundtask
+            # update_request_status(rec.id)
+
+            context = {
+                'Success': 'Purchase Request created!'
+            }
+
+            return Response(context, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_403_FORBIDDEN)
 
 
 class OtpView(APIView):

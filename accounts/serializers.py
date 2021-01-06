@@ -3,7 +3,9 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers, status
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.response import Response
-from .models import UserAccount, PayhereDetails, RFIDDetail, RFID
+from .models import UserAccount, PayhereDetails, RFIDDetail, RFID, RequestPool
+from django.utils import timezone
+
 User = get_user_model()
 
 
@@ -21,28 +23,18 @@ class UserCreateSerializer(UserCreateSerializer):
 
 
 class PayhereDetailsSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = PayhereDetails
         fields = '__all__'
 
 
-class RFIDDetailSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = RFIDDetail
-        exclude = ['rf_id', 'user']
-
-
 class OtpSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = UserAccount
         fields = ['otp', 'otp_verified']
 
 
 class UserActivationSerialier(serializers.ModelSerializer):
-
     class Meta:
         model = UserAccount
         fields = ['is_active', 'otp', 'otp_verified']
@@ -75,3 +67,34 @@ class SetNewPasswordSerializer(serializers.Serializer):
 
         except Exception as e:
             raise AuthenticationFailed(e, 401)
+
+
+class RFIDDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RFIDDetail
+        exclude = ['rf_id', 'user']
+
+
+class RequestPoolSerializer(serializers.ModelSerializer):
+    """ Serializer to get fuel payment request """
+
+    class Meta:
+        model = RequestPool
+        fields = ['vehicle_no', 'merchant_id', 'amount']
+
+    def validate(self, data):
+        # RFID validation by vehicle_no
+        try:
+            latest_request_time = RequestPool.objects.filter(vehicle_no=data['vehicle_no']).latest('request_date').request_date
+        except:
+            latest_request_time = None
+        # time stamp validation
+        if latest_request_time is not None:
+            if (timezone.now() - latest_request_time).total_seconds() < 180:
+                raise serializers.ValidationError({'Error': 'Please wait 3 minutes to place another request'})
+
+        # Is vehicle registered
+        if not RFIDDetail.objects.filter(vehicle_no=data['vehicle_no']).exists():
+            raise AuthenticationFailed({'Error':'Failed to verify the RFID, Please register your vehicle!'})
+
+        return data

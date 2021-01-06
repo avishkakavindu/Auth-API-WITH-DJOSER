@@ -3,6 +3,10 @@ from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseU
 from rest_framework.response import Response
 from rest_framework import status
 from django.utils.html import format_html
+from datetime import datetime, timedelta
+
+
+exp_time = 3    # in minutes
 
 
 class UserAccountManager(BaseUserManager):
@@ -73,27 +77,40 @@ class PayhereDetails(models.Model):
 
 
 class RFID(models.Model):
-    rf_id = models.CharField(max_length=255)
+    rf_id = models.CharField(max_length=20)
 
     def __str__(self):
-        return 'id_{} -RFID_{}'.format(self.id, self.rf_id)
+        return '{}'.format(self.rf_id)
 
 
 class RFIDDetail(models.Model):
     rf_id = models.OneToOneField(RFID, on_delete=models.CASCADE, null=True, blank=True)
+    user = models.ForeignKey(UserAccount, on_delete=models.CASCADE)
     vehicle_no = models.CharField(max_length=10)
     engine_no = models.CharField(max_length=255)
     fuel_type = models.CharField(max_length=20)
     phone = models.CharField(max_length=12)
     address = models.TextField()
-    user = models.ForeignKey(UserAccount, on_delete=models.CASCADE)
     is_assigned = models.BooleanField(default=False)
 
-    def get_rf_id(self):
+    def rfid(self):
         if self.rf_id is None:
             return format_html(
                 '<span style="color:#FF0000;">*** RFID NOT ASSIGNED ***</span>'
             )
-        return 'id_{} -RFID_{}-user_{}'.format(self.id, self.rf_id, self.user)
-    # def __str__(self):
-    #     return 'id_{} -RFID_{}-user_{}'.format(self.id, self.rf_id, self.user)
+        return '{}'.format(self.rf_id, self.user)
+
+
+class RequestPool(models.Model):
+    rfid = models.ForeignKey(RFID, on_delete=models.CASCADE)
+    vehicle_no = models.CharField(max_length=20)
+    merchant_id = models.CharField(max_length=20)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    request_date = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
+
+
+
+
+
+

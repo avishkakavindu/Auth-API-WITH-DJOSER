@@ -46,7 +46,7 @@ INSTALLED_APPS = [
     'accounts',
     'corsheaders',
     'rest_framework.authtoken',
-    'background_task',
+    # 'background_task',
 ]
 
 MIDDLEWARE = [

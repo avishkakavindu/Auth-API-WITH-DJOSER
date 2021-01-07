@@ -35,7 +35,7 @@ def assign_rfid(sender, instance, **kwargs):
                 'Success': 'Email sent to user {}'.format(email)
             }
 
-            return Response(context, status=status.HTTP_400_BAD_REQUEST)
+            return Response(context, status=status.HTTP_200_OK)
     except:
         pass
 

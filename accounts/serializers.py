@@ -77,6 +77,7 @@ class RFIDDetailSerializer(serializers.ModelSerializer):
 
 class RequestPoolSerializer(serializers.ModelSerializer):
     """ Serializer to get fuel payment request """
+    EXP_TIME = 180  # in seconds
 
     class Meta:
         model = RequestPool
@@ -90,7 +91,7 @@ class RequestPoolSerializer(serializers.ModelSerializer):
             latest_request_time = None
         # time stamp validation
         if latest_request_time is not None:
-            if (timezone.now() - latest_request_time).total_seconds() < 180:
+            if (timezone.now() - latest_request_time).total_seconds() < self.EXP_TIME:
                 raise serializers.ValidationError({'Error': 'Please wait 3 minutes to place another request'})
 
         # Is vehicle registered
@@ -98,3 +99,6 @@ class RequestPoolSerializer(serializers.ModelSerializer):
             raise AuthenticationFailed({'Error':'Failed to verify the RFID, Please register your vehicle!'})
 
         return data
+
+
+

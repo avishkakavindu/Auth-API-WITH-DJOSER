@@ -27,4 +27,5 @@ urlpatterns = [
     path('user/rfid-detail', RFIDDetailListAPIView.as_view()),
     path('user/rfid-detail/<int:pk>', RFIDDetailAPIView.as_view()),
     path('user/request-purchase', RequestPoolAPIView.as_view()),
+    path('user/request-purchase-verification', ValidateRequestPoolAPIView.as_view()),
 ]

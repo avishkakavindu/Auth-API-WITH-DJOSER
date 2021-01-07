@@ -23,5 +23,5 @@ class RFIDDetailAdmin(admin.ModelAdmin):
 
 @admin.register(RequestPool)
 class RequestPoolAdmin(admin.ModelAdmin):
-    list_display = ['rfid', 'merchant_id', 'amount', 'request_date', 'is_active']
+    list_display = ['rfid', 'merchant_id', 'amount', 'requested_date']
     search_fields = ['rfid']

@@ -11,7 +11,7 @@ from django.http import Http404
 from .serializers import *
 from .permissions import IsOwner
 from .util import Util
-from .tasks import update_request_status
+# from .tasks import update_request_status
 import requests
 from random import randint
 
@@ -35,81 +35,6 @@ class PayhereDetailViewSet(viewsets.ModelViewSet):
         owner_queryset = self.queryset.filter(user_id=self.request.user.id)
 
         return owner_queryset
-
-
-class RFIDDetailListAPIView(APIView):
-    authentication_classes = [JWTTokenUserAuthentication]
-    permission_classes = [permissions.IsAuthenticated, IsOwner]
-
-    # get rfdi records of the user
-    def get(self, request):
-        rfid_detail = RFIDDetail.objects.filter(user=self.request.user.id)
-        serializer = RFIDDetailSerializer(rfid_detail, many=True)
-
-        return Response(serializer.data)
-
-    # create rfdi record
-    def post(self, request):
-        serializer = RFIDDetailSerializer(data=request.data)
-
-        if serializer.is_valid():
-            if RFIDDetail.objects.filter(vehicle_no=self.request.data['vehicle_no']).exists():
-                return Response({'Error': 'RFID tag already assigned for the vehicle!'}, status=status.HTTP_401_UNAUTHORIZED)
-            else:
-                serializer.save(user_id=self.request.user.id)
-                context = {
-                    'Detail': 'RFID Application saved! Please wait for conformation email.',
-                    'Data': serializer.data
-                }
-                return Response(context, status=status.HTTP_201_CREATED)
-
-        return Response({'Error': 'Request Failed'}, status=status.HTTP_400_BAD_REQUEST)
-
-
-class RFIDDetailAPIView(APIView):
-    authentication_classes = [JWTTokenUserAuthentication]
-    permission_classes = [permissions.IsAuthenticated, IsOwner]
-
-    # get individual record
-    def get_object(self, request, pk):
-        try:
-            return RFIDDetail.objects.get(pk=pk, user=request.user.id)
-        except RFIDDetail.DoesNotExist:
-            raise Http404
-
-    def get(self, request, pk):
-        record = self.get_object(request, pk)
-        serializer = RFIDDetailSerializer(record)
-
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-class RequestPoolAPIView(generics.CreateAPIView):
-    authentication_classes = [JWTTokenUserAuthentication]
-    permission_classes = [permissions.IsAuthenticated, IsOwner]
-
-    def get_rfid(self, vehicle_no):
-        rfid = RFIDDetail.objects.get(vehicle_no=vehicle_no)
-
-        return rfid
-
-    def post(self, request):
-        serializer = RequestPoolSerializer(data=request.data)
-
-        if serializer.is_valid():
-            rfid = RFIDDetail.objects.get(vehicle_no=request.data['vehicle_no']).rf_id
-
-            rec = serializer.save(rfid=rfid)
-            # shedule bakgroundtask
-            # update_request_status(rec.id)
-
-            context = {
-                'Success': 'Purchase Request created!'
-            }
-
-            return Response(context, status=status.HTTP_201_CREATED)
-
-        return Response(serializer.errors, status=status.HTTP_403_FORBIDDEN)
 
 
 class OtpView(APIView):
@@ -268,7 +193,116 @@ class OtpInitialAPIView(APIView):
             return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class RFIDDetailListAPIView(APIView):
+    authentication_classes = [JWTTokenUserAuthentication]
+    permission_classes = [permissions.IsAuthenticated, IsOwner]
 
+    # get rfdi records of the user
+    def get(self, request):
+        rfid_detail = RFIDDetail.objects.filter(user=self.request.user.id)
+        serializer = RFIDDetailSerializer(rfid_detail, many=True)
+
+        return Response(serializer.data)
+
+    # create rfdi record
+    def post(self, request):
+        serializer = RFIDDetailSerializer(data=request.data)
+
+        if serializer.is_valid():
+            if RFIDDetail.objects.filter(vehicle_no=self.request.data['vehicle_no']).exists():
+                return Response({'Error': 'RFID tag already assigned for the vehicle!'}, status=status.HTTP_401_UNAUTHORIZED)
+            else:
+                serializer.save(user_id=self.request.user.id)
+                context = {
+                    'Detail': 'RFID Application saved! Please wait for conformation email.',
+                    'Data': serializer.data
+                }
+                return Response(context, status=status.HTTP_201_CREATED)
+
+        return Response({'Error': 'Request Failed'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class RFIDDetailAPIView(APIView):
+    authentication_classes = [JWTTokenUserAuthentication]
+    permission_classes = [permissions.IsAuthenticated, IsOwner]
+
+    # get individual record
+    def get_object(self, request, pk):
+        try:
+            return RFIDDetail.objects.get(pk=pk, user=request.user.id)
+        except RFIDDetail.DoesNotExist:
+            raise Http404
+
+    def get(self, request, pk):
+        record = self.get_object(request, pk)
+        serializer = RFIDDetailSerializer(record)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class RequestPoolAPIView(generics.CreateAPIView):
+    authentication_classes = [JWTTokenUserAuthentication]
+    permission_classes = [permissions.IsAuthenticated, IsOwner]
+
+    def post(self, request):
+        serializer = RequestPoolSerializer(data=request.data)
+
+        if serializer.is_valid():
+            rfid = RFIDDetail.objects.get(vehicle_no=request.data['vehicle_no']).rf_id
+
+            rec = serializer.save(rfid=rfid)
+            # shedule bakgroundtask
+            # update_request_status(rec.id)
+
+            context = {
+                'Success': 'Purchase Request created!'
+            }
+
+            return Response(context, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_403_FORBIDDEN)
+
+
+class ValidateRequestPoolAPIView(APIView):
+    authentication_classes = [JWTTokenUserAuthentication]
+    permission_classes = [permissions.IsAuthenticated, IsOwner]
+
+    EXP_TIME = 180  # in seconds
+
+    def get(self, request):
+        rfid = request.data['rfid']
+        print(rfid)
+
+        try:
+            latest_request = RequestPool.objects.filter(
+                rfid__rf_id=rfid
+            ).latest('request_date')
+            print('\n\n\nlol\n\n\n')
+            latest_request_time = latest_request.request_date
+            vehicle_no = latest_request.vehicle_no
+            amount = latest_request.amount
+
+            # if expired rquest
+            if (timezone.now() - latest_request_time).total_seconds() > self.EXP_TIME:
+                context = {
+                    'Error': 'The request is expired! Please re-request.'
+                }
+
+                return Response(context, status=status.HTTP_401_UNAUTHORIZED)
+            else:
+                context = {
+                    'Success': 'Request is valid!',
+                    'RFID': rfid,
+                    'Vehicle No': vehicle_no,
+                    'Amount': amount
+                }
+
+                return Response(context, status=status.HTTP_202_ACCEPTED)
+        except:
+            context = {
+                'Error': 'Request not found!'
+            }
+            return Response(context, status=status.HTTP_404_NOT_FOUND)
 
 
 

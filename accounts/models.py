@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.utils.html import format_html
 from datetime import datetime, timedelta
+from django.utils import timezone
 
 
 exp_time = 3    # in minutes
@@ -107,7 +108,13 @@ class RequestPool(models.Model):
     merchant_id = models.CharField(max_length=20)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     request_date = models.DateTimeField(auto_now_add=True)
-    is_active = models.BooleanField(default=True)
+
+    def requested_date(self):
+        if (timezone.now() - self.request_date).total_seconds() > 180 :
+            return format_html(
+                '<span style="color:#FF0000;">*** EXPIRED ***</span>'
+            )
+        return '{}'.format(self.request_date)
 
 
 

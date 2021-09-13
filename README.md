@@ -1,1 +1,1 @@
-## REST API for RFID based filling(fuel) app
+## REST API for RFID based app
